@@ -23,4 +23,17 @@ public class GlobalExceptionHandler {
                         "message", ex.getMessage()
                 ));
     }
+
+    @ExceptionHandler(InvalidTransactionStateException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidState(
+            InvalidTransactionStateException ex) {
+
+        return ResponseEntity.badRequest()
+                .body(Map.of(
+                        "timestamp", LocalDateTime.now(),
+                        "status", 400,
+                        "error", "Invalid Transaction State",
+                        "message", ex.getMessage()
+                ));
+    }
 }
