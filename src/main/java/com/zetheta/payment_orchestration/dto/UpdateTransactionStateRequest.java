@@ -7,7 +7,7 @@ import lombok.Data;
 @Data
 public class UpdateTransactionStateRequest {
 
-    @NotNull
+    @NotNull(message = "Transaction state is required")
     private TransactionState transactionState;
 
 }

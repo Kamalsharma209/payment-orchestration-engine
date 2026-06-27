@@ -9,15 +9,20 @@ import java.util.UUID;
 public interface TransactionService {
 
     /**
-     * Creates a new payment transaction.
-     *
-     *  Payment request details
-     * @return Payment response containing transaction details
+     * Create a new payment transaction.
+     */
+    PaymentResponse createPayment(CreatePaymentRequest request);
+
+    /**
+     * Fetch payment details using transaction ID.
      */
     PaymentResponse getPayment(UUID transactionId);
 
+    /**
+     * Update transaction state.
+     */
     PaymentResponse updateTransactionState(
             UUID transactionId,
-            UpdateTransactionStateRequest request);
-
+            UpdateTransactionStateRequest request
+    );
 }
