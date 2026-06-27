@@ -3,11 +3,13 @@ import com.zetheta.payment_orchestration.dto.UpdateTransactionStateRequest;
 import com.zetheta.payment_orchestration.exception.InvalidTransactionStateException;
 import com.zetheta.payment_orchestration.dto.CreatePaymentRequest;
 import com.zetheta.payment_orchestration.dto.PaymentResponse;
-import com.zetheta.payment_orchestration.dto.UpdateTransactionStateRequest;
 import com.zetheta.payment_orchestration.entity.Transaction;
 import com.zetheta.payment_orchestration.enums.TransactionState;
 import com.zetheta.payment_orchestration.exception.DuplicateTransactionException;
+import com.zetheta.payment_orchestration.gateway.GatewayFactory;
+import com.zetheta.payment_orchestration.gateway.PaymentGatewayStrategy;
 import com.zetheta.payment_orchestration.repository.TransactionRepository;
+import com.zetheta.payment_orchestration.routing.GatewayRoutingService;
 import com.zetheta.payment_orchestration.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,6 +22,8 @@ import java.util.UUID;
 public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
+    private final GatewayRoutingService gatewayRoutingService;
+    private final GatewayFactory gatewayFactory;
 
     @Override
     public PaymentResponse createPayment(CreatePaymentRequest request) {
@@ -42,6 +46,30 @@ public class TransactionServiceImpl implements TransactionService {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
+        // Step 1: Routing Engine selects the best gateway
+        String selectedGateway = gatewayRoutingService.chooseGateway(transaction);
+
+        // Step 2: Get gateway implementation from factory
+        PaymentGatewayStrategy gateway =
+                gatewayFactory.getGateway(selectedGateway);
+
+        // Step 3: Process payment
+        com.zetheta.payment_orchestration.gateway.GatewayResponse response =
+                gateway.processPayment(transaction);
+
+        // Step 4: Update transaction
+        if (response.isSuccess()) {
+
+            transaction.setGateway(
+                    com.zetheta.payment_orchestration.enums.PaymentGateway.valueOf(selectedGateway));
+
+            transaction.setTransactionState(TransactionState.ROUTE_SELECTED);
+        } else {
+            transaction.setTransactionState(TransactionState.FAILED);
+        }
+
+        transaction.setUpdatedAt(LocalDateTime.now());
+
         transactionRepository.save(transaction);
 
         return PaymentResponse.builder()
@@ -54,7 +82,7 @@ public class TransactionServiceImpl implements TransactionService {
                         ? null
                         : transaction.getGateway().name())
                 .transactionState(transaction.getTransactionState().name())
-                .message("Payment Created Successfully")
+                .message(response.getMessage())
                 .build();
     }
 

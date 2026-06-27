@@ -9,9 +9,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class GatewayFactory {
 
-    private final List<PaymentGateway> paymentGateways;
+    private final List<PaymentGatewayStrategy> paymentGateways;
 
-    public PaymentGateway getGateway(String gatewayName) {
+    public PaymentGatewayStrategy getGateway(String gatewayName) {
 
         return paymentGateways.stream()
                 .filter(g -> g.getGatewayName().equalsIgnoreCase(gatewayName))
