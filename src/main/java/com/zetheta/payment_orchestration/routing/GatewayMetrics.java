@@ -21,4 +21,5 @@ public class GatewayMetrics {
 
     private boolean healthy;
 
+    private int failureCount;
 }

@@ -1,6 +1,7 @@
 package com.zetheta.payment_orchestration.gateway.impl;
 
 import com.zetheta.payment_orchestration.entity.Transaction;
+import com.zetheta.payment_orchestration.exception.GatewayException;
 import com.zetheta.payment_orchestration.gateway.GatewayResponse;
 import com.zetheta.payment_orchestration.gateway.PaymentGatewayStrategy;
 import org.springframework.stereotype.Component;
@@ -18,10 +19,6 @@ public class UpiGateway implements PaymentGatewayStrategy {
     @Override
     public GatewayResponse processPayment(Transaction transaction) {
 
-        return GatewayResponse.builder()
-                .success(true)
-                .gatewayTransactionId("UPI-" + UUID.randomUUID())
-                .message("Payment processed successfully by Razorpay")
-                .build();
+        throw new GatewayException("UPI Gateway is unavailable");
     }
 }

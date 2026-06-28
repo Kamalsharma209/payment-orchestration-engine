@@ -1,5 +1,6 @@
 package com.zetheta.payment_orchestration.service.imp;
 import com.zetheta.payment_orchestration.dto.UpdateTransactionStateRequest;
+import com.zetheta.payment_orchestration.exception.GatewayException;
 import com.zetheta.payment_orchestration.exception.InvalidTransactionStateException;
 import com.zetheta.payment_orchestration.dto.CreatePaymentRequest;
 import com.zetheta.payment_orchestration.dto.PaymentResponse;
@@ -7,10 +8,12 @@ import com.zetheta.payment_orchestration.entity.Transaction;
 import com.zetheta.payment_orchestration.enums.TransactionState;
 import com.zetheta.payment_orchestration.exception.DuplicateTransactionException;
 import com.zetheta.payment_orchestration.gateway.GatewayFactory;
+import com.zetheta.payment_orchestration.gateway.GatewayResponse;
 import com.zetheta.payment_orchestration.gateway.PaymentGatewayStrategy;
 import com.zetheta.payment_orchestration.repository.TransactionRepository;
 import com.zetheta.payment_orchestration.routing.GatewayRoutingService;
 import com.zetheta.payment_orchestration.service.TransactionService;
+import com.zetheta.payment_orchestration.util.RetryExecutor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +27,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionRepository transactionRepository;
     private final GatewayRoutingService gatewayRoutingService;
     private final GatewayFactory gatewayFactory;
+    private final RetryExecutor retryExecutor;
 
     @Override
     public PaymentResponse createPayment(CreatePaymentRequest request) {
@@ -45,20 +49,37 @@ public class TransactionServiceImpl implements TransactionService {
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
-
-        // Step 1: Routing Engine selects the best gateway
         String selectedGateway = gatewayRoutingService.chooseGateway(transaction);
 
-        // Step 2: Get gateway implementation from factory
-        PaymentGatewayStrategy gateway =
-                gatewayFactory.getGateway(selectedGateway);
+        GatewayResponse response;
 
-        // Step 3: Process payment
-        com.zetheta.payment_orchestration.gateway.GatewayResponse response =
-                gateway.processPayment(transaction);
+        try {
+
+            PaymentGatewayStrategy gateway =
+                    gatewayFactory.getGateway(selectedGateway);
+            response = retryExecutor.execute(gateway, transaction);
+
+        } catch (GatewayException ex) {
+            gatewayRoutingService.markGatewayFailure(selectedGateway);
+
+            System.out.println("Primary gateway failed: " + ex.getMessage());
+
+            String backupGateway =
+                    gatewayRoutingService.getBackupGateway(selectedGateway);
+
+            System.out.println("Switching to backup gateway: " + backupGateway);
+
+            PaymentGatewayStrategy backup =
+                    gatewayFactory.getGateway(backupGateway);
+            response = retryExecutor.execute(backup, transaction);
+
+            selectedGateway = backupGateway;
+        }
+
 
         // Step 4: Update transaction
         if (response.isSuccess()) {
+            gatewayRoutingService.markGatewaySuccess(selectedGateway);
 
             transaction.setGateway(
                     com.zetheta.payment_orchestration.enums.PaymentGateway.valueOf(selectedGateway));
