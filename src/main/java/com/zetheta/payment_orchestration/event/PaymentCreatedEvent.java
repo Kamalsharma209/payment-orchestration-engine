@@ -30,4 +30,7 @@ public class PaymentCreatedEvent {
     private LocalDateTime createdAt;
     private String eventType;
     private String eventId;
+
+    @Builder.Default
+    private Integer retryCount = 0;
 }

@@ -25,6 +25,14 @@ public class NotificationConsumer {
 
         log.info("Notification received: {}", event.getMerchantTransactionId());
 
-        throw new RuntimeException("Simulated Notification Failure");
+        if (event.getRetryCount() < 2) {
+
+            throw new RuntimeException(
+                    "Simulated Failure Retry = "
+                            + event.getRetryCount());
+        }
+
+        log.info("Notification sent successfully after retry {}",
+                event.getRetryCount());
     }
 }
