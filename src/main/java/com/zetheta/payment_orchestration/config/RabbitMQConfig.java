@@ -6,46 +6,59 @@ import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RabbitMQConfig {
 
-    // Queue Name
-    public static final String PAYMENT_QUEUE = "payment.queue";
-
-    // Exchange Name
+    // Exchange
     public static final String PAYMENT_EXCHANGE = "payment.exchange";
 
     // Routing Key
     public static final String PAYMENT_ROUTING_KEY = "payment.routing.key";
 
+    // Queues
+    public static final String PAYMENT_AUDIT_QUEUE = "payment.audit.queue";
+
+    public static final String PAYMENT_NOTIFICATION_QUEUE = "payment.notification.queue";
+
     @Bean
-    public Queue paymentQueue() {
-        System.out.println("Creating Queue Bean");
-        return new Queue(PAYMENT_QUEUE, true);
+    public Queue paymentAuditQueue() {
+        return new Queue(PAYMENT_AUDIT_QUEUE, true);
+    }
+
+    @Bean
+    public Queue paymentNotificationQueue() {
+        return new Queue(PAYMENT_NOTIFICATION_QUEUE, true);
     }
 
     @Bean
     public DirectExchange paymentExchange() {
-        System.out.println("Creating Exchange Bean");
         return new DirectExchange(PAYMENT_EXCHANGE, true, false);
     }
 
     @Bean
-    public Binding paymentBinding(
-            Queue paymentQueue,
+    public Binding auditBinding(
+            Queue paymentAuditQueue,
             DirectExchange paymentExchange) {
 
-        System.out.println("Creating Binding Bean");
+        return BindingBuilder
+                .bind(paymentAuditQueue)
+                .to(paymentExchange)
+                .with(PAYMENT_ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding notificationBinding(
+            Queue paymentNotificationQueue,
+            DirectExchange paymentExchange) {
 
         return BindingBuilder
-                .bind(paymentQueue)
+                .bind(paymentNotificationQueue)
                 .to(paymentExchange)
                 .with(PAYMENT_ROUTING_KEY);
     }
@@ -53,12 +66,11 @@ public class RabbitMQConfig {
     @Bean
     public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
 
-        System.out.println("Creating RabbitAdmin");
-
         RabbitAdmin rabbitAdmin = new RabbitAdmin(connectionFactory);
         rabbitAdmin.setAutoStartup(true);
         return rabbitAdmin;
     }
+
     @Bean
     public MessageConverter messageConverter() {
         return new Jackson2JsonMessageConverter();
@@ -74,5 +86,4 @@ public class RabbitMQConfig {
 
         return rabbitTemplate;
     }
-
 }

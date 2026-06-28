@@ -14,8 +14,7 @@ import org.springframework.stereotype.Component;
 public class PaymentEventConsumer {
 
     private final PaymentAuditService paymentAuditService;
-
-    @RabbitListener(queues = RabbitMQConfig.PAYMENT_QUEUE)
+    @RabbitListener(queues = RabbitMQConfig.PAYMENT_AUDIT_QUEUE)
     public void consumePaymentCreatedEvent(PaymentCreatedEvent event) {
 
         log.info("========================================");

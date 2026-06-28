@@ -106,6 +106,7 @@ public class TransactionServiceImpl implements TransactionService {
                                 ? null
                                 : transaction.getGateway().name()
                 )
+                .eventType("PAYMENT_CREATED")
                 .createdAt(transaction.getCreatedAt())
                 .build();
 

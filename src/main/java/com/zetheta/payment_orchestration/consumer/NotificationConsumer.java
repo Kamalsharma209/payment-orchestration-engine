@@ -1,4 +1,4 @@
-package com.zetheta.payment_orchestration.controller;
+package com.zetheta.payment_orchestration.consumer;
 
 import com.zetheta.payment_orchestration.config.RabbitMQConfig;
 import com.zetheta.payment_orchestration.event.PaymentCreatedEvent;
@@ -15,7 +15,7 @@ public class NotificationConsumer {
 
     private final NotificationService notificationService;
 
-    @RabbitListener(queues = RabbitMQConfig.PAYMENT_QUEUE)
+    @RabbitListener(queues = RabbitMQConfig.PAYMENT_NOTIFICATION_QUEUE)
     public void consumeNotification(PaymentCreatedEvent event) {
 
         log.info("Notification Consumer received event: {}",

@@ -42,6 +42,10 @@ public class NotificationServiceImpl implements NotificationService {
 
     private String buildMessage(PaymentCreatedEvent event) {
 
+        if (event.getEventType() == null) {
+            return "Payment update received.";
+        }
+
         return switch (event.getEventType()) {
 
             case "PAYMENT_CREATED" ->
