@@ -20,19 +20,29 @@ public class NotificationConsumer {
     private final IdempotencyService idempotencyService;
 
     @RabbitListener(queues = RabbitMQConfig.PAYMENT_NOTIFICATION_QUEUE)
-    @RabbitListener(queues = RabbitMQConfig.PAYMENT_NOTIFICATION_QUEUE)
     public void consumeNotification(PaymentCreatedEvent event) {
 
-        log.info("Notification received: {}", event.getMerchantTransactionId());
+        log.info("======================================");
+        log.info("Notification Event Received");
+        log.info("Merchant Txn : {}", event.getMerchantTransactionId());
+        log.info("Event Type   : {}", event.getEventType());
+        log.info("======================================");
 
-        if (event.getRetryCount() < 2) {
+        if (idempotencyService.isProcessed(event.getEventId(), CONSUMER)) {
 
-            throw new RuntimeException(
-                    "Simulated Failure Retry = "
-                            + event.getRetryCount());
+            log.info("Duplicate Notification Ignored : {}",
+                    event.getEventId());
+
+            return;
         }
 
-        log.info("Notification sent successfully after retry {}",
-                event.getRetryCount());
+        notificationService.sendNotification(event);
+
+        idempotencyService.markProcessed(
+                event.getEventId(),
+                CONSUMER,
+                event.getEventType());
+
+        log.info("Notification processed successfully");
     }
 }
