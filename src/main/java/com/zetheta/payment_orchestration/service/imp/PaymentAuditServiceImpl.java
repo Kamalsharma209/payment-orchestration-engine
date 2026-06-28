@@ -26,7 +26,7 @@ public class PaymentAuditServiceImpl implements PaymentAuditService {
                 .currency(event.getCurrency())
                 .paymentMethod(event.getPaymentMethod())
                 .gateway(event.getGateway())
-                .eventType("PAYMENT_CREATED")
+                .eventType(event.getEventType())
                 .createdAt(event.getCreatedAt())
                 .build();
 

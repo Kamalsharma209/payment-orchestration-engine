@@ -28,4 +28,5 @@ public class PaymentCreatedEvent {
     private String gateway;
 
     private LocalDateTime createdAt;
+    private String eventType;
 }
