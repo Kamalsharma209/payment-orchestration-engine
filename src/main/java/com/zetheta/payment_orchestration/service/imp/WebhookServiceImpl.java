@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import com.zetheta.payment_orchestration.event.PaymentCreatedEvent;
 import com.zetheta.payment_orchestration.producer.PaymentEventProducer;
+import java.util.UUID;
 
 import java.time.LocalDateTime;
 
@@ -41,6 +42,7 @@ public class WebhookServiceImpl implements WebhookService {
 
         transactionRepository.save(transaction);
         PaymentCreatedEvent event = PaymentCreatedEvent.builder()
+                .eventId(java.util.UUID.randomUUID().toString())
                 .transactionId(transaction.getId())
                 .merchantTransactionId(transaction.getMerchantTransactionId())
                 .amount(transaction.getAmount())

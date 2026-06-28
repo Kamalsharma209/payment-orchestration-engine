@@ -96,6 +96,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         transactionRepository.save(transaction);
         PaymentCreatedEvent event = PaymentCreatedEvent.builder()
+                .eventId(UUID.randomUUID().toString())
                 .transactionId(transaction.getId())
                 .merchantTransactionId(transaction.getMerchantTransactionId())
                 .amount(transaction.getAmount())

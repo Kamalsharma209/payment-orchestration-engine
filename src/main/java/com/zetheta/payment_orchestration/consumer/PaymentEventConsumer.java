@@ -2,6 +2,7 @@ package com.zetheta.payment_orchestration.consumer;
 
 import com.zetheta.payment_orchestration.config.RabbitMQConfig;
 import com.zetheta.payment_orchestration.event.PaymentCreatedEvent;
+import com.zetheta.payment_orchestration.service.IdempotencyService;
 import com.zetheta.payment_orchestration.service.PaymentAuditService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,9 +14,21 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class PaymentEventConsumer {
 
+    private static final String CONSUMER = "AUDIT";
+
     private final PaymentAuditService paymentAuditService;
+    private final IdempotencyService idempotencyService;
+
     @RabbitListener(queues = RabbitMQConfig.PAYMENT_AUDIT_QUEUE)
     public void consumePaymentCreatedEvent(PaymentCreatedEvent event) {
+
+        if (idempotencyService.isProcessed(
+                event.getEventId(),
+                CONSUMER)) {
+
+            log.info("Duplicate Audit Event Ignored: {}", event.getEventId());
+            return;
+        }
 
         log.info("========================================");
         log.info("Payment Event Received");
@@ -23,8 +36,16 @@ public class PaymentEventConsumer {
         log.info("Merchant Txn ID: {}", event.getMerchantTransactionId());
         log.info("Amount         : {}", event.getAmount());
         log.info("Gateway        : {}", event.getGateway());
+        log.info("Event Type     : {}", event.getEventType());
         log.info("========================================");
 
         paymentAuditService.saveAudit(event);
+
+        idempotencyService.markProcessed(
+                event.getEventId(),
+                CONSUMER,
+                event.getEventType());
+
+        log.info("Audit event processed successfully.");
     }
 }

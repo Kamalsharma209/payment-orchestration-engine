@@ -29,4 +29,5 @@ public class PaymentCreatedEvent {
 
     private LocalDateTime createdAt;
     private String eventType;
+    private String eventId;
 }
