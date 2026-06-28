@@ -1,9 +1,6 @@
 package com.zetheta.payment_orchestration.config;
 
-import org.springframework.amqp.core.Binding;
-import org.springframework.amqp.core.BindingBuilder;
-import org.springframework.amqp.core.DirectExchange;
-import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -11,6 +8,8 @@ import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 
 @Configuration
 public class RabbitMQConfig {
@@ -33,7 +32,12 @@ public class RabbitMQConfig {
 
     @Bean
     public Queue paymentNotificationQueue() {
-        return new Queue(PAYMENT_NOTIFICATION_QUEUE, true);
+
+        return QueueBuilder
+                .durable(PAYMENT_NOTIFICATION_QUEUE)
+                .deadLetterExchange(PAYMENT_DLX)
+                .deadLetterRoutingKey(PAYMENT_DLX_ROUTING_KEY)
+                .build();
     }
 
     @Bean
@@ -85,5 +89,47 @@ public class RabbitMQConfig {
         rabbitTemplate.setMessageConverter(messageConverter);
 
         return rabbitTemplate;
+    }
+    public static final String PAYMENT_DLX =
+            "payment.dlx.exchange";
+
+    public static final String PAYMENT_NOTIFICATION_DLQ =
+            "payment.notification.dlq";
+
+    public static final String PAYMENT_DLX_ROUTING_KEY =
+            "payment.dlx.routing.key";
+    @Bean
+    public DirectExchange paymentDeadLetterExchange() {
+        return new DirectExchange(PAYMENT_DLX, true, false);
+    }
+    @Bean
+    public Queue paymentNotificationDLQ() {
+        return new Queue(PAYMENT_NOTIFICATION_DLQ, true);
+    }
+    @Bean
+    public Binding deadLetterBinding(
+            Queue paymentNotificationDLQ,
+            DirectExchange paymentDeadLetterExchange) {
+
+        return BindingBuilder
+                .bind(paymentNotificationDLQ)
+                .to(paymentDeadLetterExchange)
+                .with(PAYMENT_DLX_ROUTING_KEY);
+    }
+    @Bean
+    public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
+            ConnectionFactory connectionFactory,
+            MessageConverter messageConverter) {
+
+        SimpleRabbitListenerContainerFactory factory =
+                new SimpleRabbitListenerContainerFactory();
+
+        factory.setConnectionFactory(connectionFactory);
+        factory.setMessageConverter(messageConverter);
+
+        // Important
+        factory.setDefaultRequeueRejected(false);
+
+        return factory;
     }
 }
