@@ -1,5 +1,6 @@
 package com.zetheta.payment_orchestration.service.imp;
 import com.zetheta.payment_orchestration.dto.UpdateTransactionStateRequest;
+import com.zetheta.payment_orchestration.event.PaymentCreatedEvent;
 import com.zetheta.payment_orchestration.exception.GatewayException;
 import com.zetheta.payment_orchestration.exception.InvalidTransactionStateException;
 import com.zetheta.payment_orchestration.dto.CreatePaymentRequest;
@@ -10,6 +11,7 @@ import com.zetheta.payment_orchestration.exception.DuplicateTransactionException
 import com.zetheta.payment_orchestration.gateway.GatewayFactory;
 import com.zetheta.payment_orchestration.gateway.GatewayResponse;
 import com.zetheta.payment_orchestration.gateway.PaymentGatewayStrategy;
+import com.zetheta.payment_orchestration.producer.PaymentEventProducer;
 import com.zetheta.payment_orchestration.repository.TransactionRepository;
 import com.zetheta.payment_orchestration.routing.GatewayRoutingService;
 import com.zetheta.payment_orchestration.service.TransactionService;
@@ -28,6 +30,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final GatewayRoutingService gatewayRoutingService;
     private final GatewayFactory gatewayFactory;
     private final RetryExecutor retryExecutor;
+    private final PaymentEventProducer paymentEventProducer;
 
     @Override
     public PaymentResponse createPayment(CreatePaymentRequest request) {
@@ -92,6 +95,21 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setUpdatedAt(LocalDateTime.now());
 
         transactionRepository.save(transaction);
+        PaymentCreatedEvent event = PaymentCreatedEvent.builder()
+                .transactionId(transaction.getId())
+                .merchantTransactionId(transaction.getMerchantTransactionId())
+                .amount(transaction.getAmount())
+                .currency(transaction.getCurrency())
+                .paymentMethod(transaction.getPaymentMethod().name())
+                .gateway(
+                        transaction.getGateway() == null
+                                ? null
+                                : transaction.getGateway().name()
+                )
+                .createdAt(transaction.getCreatedAt())
+                .build();
+
+        paymentEventProducer.publishPaymentCreatedEvent(event);
 
         return PaymentResponse.builder()
                 .transactionId(transaction.getId())
