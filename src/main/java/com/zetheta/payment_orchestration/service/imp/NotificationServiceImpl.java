@@ -60,6 +60,9 @@ public class NotificationServiceImpl implements NotificationService {
             case "PAYMENT_FAILED" ->
                     "Your payment has failed.";
 
+            case "PAYMENT_REFUNDED" ->
+                    "Your refund has been processed successfully.";
+
             default ->
                     "Payment update received.";
         };
